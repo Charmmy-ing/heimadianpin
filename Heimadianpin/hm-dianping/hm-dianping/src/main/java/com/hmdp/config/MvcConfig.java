@@ -11,13 +11,11 @@ import javax.annotation.Resource;
 
 @Configuration
 public class MvcConfig implements WebMvcConfigurer {
-    // 注入Redis模板
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 登录拦截器
-        registry.addInterceptor(new LoginInterceptor(stringRedisTemplate))
+        // 访问的拦截器
+        registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
                         "/shop/**",
                         "/voucher/**",
@@ -27,7 +25,9 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/user/login",
                         "/blog/hot"
                 ).order(1);
-        // 刷新token拦截器
-        registry.addInterceptor(new RefreshTokenceptor(stringRedisTemplate)).addPathPatterns("/**").order(0);
+        // 用于存用户信息和刷新token的拦截器
+        registry.addInterceptor(new RefreshTokenceptor())
+                .addPathPatterns("/**")
+                .order(0);
     }
 }

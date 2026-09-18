@@ -12,7 +12,6 @@ import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -38,9 +37,16 @@ import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 @Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
-@Resource
-private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
+    //发送短信验证码
+    /*
+    * 发送短信验证码
+    * @param phone 手机号
+    * @param session 会话
+    * @return 结果
+    *     */
     @Override
     public Result sendCode(String phone, HttpSession session) {
         //1.校验手机号
@@ -57,7 +63,13 @@ private StringRedisTemplate stringRedisTemplate;
         //5.返回成功信息
         return Result.ok();
     }
-
+    //登录
+    /*
+    *@param loginForm 登录表单
+    *@param session 会话
+    *@return 结果
+    *
+     */
     @Override
     public Result login(LoginFormDTO loginForm, HttpSession session) {
         //1.校验手机号格式是否正确
@@ -87,12 +99,13 @@ private StringRedisTemplate stringRedisTemplate;
         String token = UUID.randomUUID().toString();
           //8.2拿到安全的User对象
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        //类型转换（因为StringRedisTemplate只能保存字符串类型，而UserDTO中的id是Long类型所有这里要转换为字符串）
         Map<String,Object> userMap = BeanUtil.beanToMap(userDTO,new HashMap<>(),
                 CopyOptions.create()
                         .setIgnoreNullValue(true)
                         .setFieldValueEditor((fieldName,fieldValue) -> fieldValue.toString()));
           //8.3以hash数据类型保存到redis里
-        stringRedisTemplate.opsForHash().putAll("login:token:"+token,userMap);
+        stringRedisTemplate.opsForHash().putAll(LOGIN_USER_KEY+token,userMap);
         //8.4设置过期时间
         stringRedisTemplate.expire(LOGIN_USER_KEY+token,LOGIN_USER_TTL , TimeUnit.MINUTES);
         //9.返回token给前端浏览器

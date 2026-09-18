@@ -2,7 +2,9 @@ package com.hmdp.utils;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.hmdp.dto.UserDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
@@ -10,11 +12,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+@Component
 public class RefreshTokenceptor implements HandlerInterceptor {
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
-    public RefreshTokenceptor(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
-    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         //1.获取请求头中的token
@@ -25,18 +27,12 @@ public class RefreshTokenceptor implements HandlerInterceptor {
 
         //2.根据token，从redis中获取用户数据
         Map<Object,Object> userMap = stringRedisTemplate.opsForHash().entries(RedisConstants.LOGIN_USER_KEY+token);
-
-        //3.判断用户是否存在
-        if(userMap.isEmpty()){
-            return true;
-        }
-        //5.存在，保存用户数据到ThreadLocal
         //5.1把userMap转换为UserDTO
         UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap,new UserDTO(),false);
+        //5.2把userDTO保存到ThreadLocal中
         UserHolder.saveUser(userDTO);
         //6.刷新token的过期时间
         stringRedisTemplate.expire(RedisConstants.LOGIN_USER_KEY+token,RedisConstants.LOGIN_USER_TTL, TimeUnit.MINUTES);
-
         //7.放行
         return true;
     }
